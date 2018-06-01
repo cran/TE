@@ -9,7 +9,9 @@ EstDynamics(mismatch, len, r = 0.013, perturb = 2, rateRange = NULL,
   plotFit = FALSE, plotSensitivity = FALSE, pause = plotFit &&
   plotSensitivity, main = sprintf("n = \%d", n))
 
-EstDynamics2(mismatch, len, r = 0.013, nTrial = 10L, plotFit = FALSE, ...)
+EstDynamics2(mismatch, len, r = 0.013, nTrial = 10L, perturb = 2,
+  rateRange = NULL, plotFit = FALSE, plotSensitivity = FALSE,
+  pause = plotFit && plotSensitivity, ...)
 }
 \arguments{
 \item{mismatch}{A vector containing the number of mismatches.}

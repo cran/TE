@@ -4,7 +4,7 @@
 \name{AetLTR}
 \alias{AetLTR}
 \title{LTR retrotransposons in \emph{Aegilops tauschii}}
-\format{A data frame with 18024 rows and 12 columns. Each row corresponds to a unique LTR retrotransposon, and each column corresponds to a feature of the LTR-RTN. The columns are:
+\format{A data frame with 18024 rows and 12 columns. Each row corresponds to a unique LTR retrotransposon, and each column corresponds to a feature of the LTR-RT. The columns are:
 \describe{
 \item{SeqID}{LTR retrotransposon sequence ID}
 \item{UngapedLen}{Length of each LTR}

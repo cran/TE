@@ -89,25 +89,27 @@ EstDynamics <- function(mismatch, len, r=1.3e-2, perturb=2, rateRange=NULL, plot
 
   if (plotFit) {
     lwd <- 2
-    hist(as.integer(mismatch), 
+    MASS::truehist(as.integer(mismatch), 
          xlab='Mismatch', 
          main=main, 
          ylim=c(0, yMax), 
-         probability=TRUE, 
-         col='cyan', 
-         breaks=min(20, length(unique(as.integer(mismatch)))))
+         prob=TRUE, 
+         col='white', 
+         nbins=min(20, length(unique(as.integer(mismatch))) + 1))
          # , xlim=c(0, max(mismatch)))
-    lines(den1, lwd=lwd)
-    lines(pts, nbDensity, lty=2, lwd=lwd)
+    ind <- den1$x >= 0
+    lines(den1$x[ind], den1$y[ind], lwd=lwd)
+    lines(pts, nbDensity, lty=2, lwd=lwd, col='blue')
     # lines(pts, lineGeom, lty=3)
-    lines(ptsDense, lineGammaRec, lty=4, lwd=lwd)
+    lines(ptsDense, lineGammaRec, lty=4, lwd=lwd, col='blue')
     legend('topright', 
            legend=c('KDE', 
                     'neg. bin.', 
                     # 'geometric', 
                     'age dist'), 
            lty=c(1, 2, 4), 
-           lwd=lwd) 
+           lwd=lwd,
+           col=c('black', 'blue', 'blue')) 
            # title='Density fit')
     if (pause)
       readline('Press enter to continue')
@@ -233,13 +235,13 @@ print.TEfit2 <- function(x, ...) {
 
 SensitivityPlot <- function(resList, col, xMax, markHalfPeak=FALSE, famLegend=TRUE, rLegend=names(resList), ...) {
 
-  if (!is.null(names(resList)[1]) && names(resList)[1] == 'pvalue') { # not a list
+  if (!is.null(names(resList)[1]) && 'pvalue' %in% names(resList)) { # not a list
     resList <- list(resList) 
   }
 
-  if (any(sapply(resList, function(x) 'TEfit2' %in% class(x)))) {
-    warning("SensitivityPlot is only implemented for 'TEfit' objects. Using fits produced by EstDynamics")
-  }
+  # if (any(sapply(resList, function(x) 'TEfit2' %in% class(x)))) {
+    # warning("SensitivityPlot is only implemented for 'TEfit' objects. Using fits produced by EstDynamics")
+  # }
 
   if (missing(col)) {
     col <- grDevices::rainbow(length(resList))
@@ -254,14 +256,15 @@ SensitivityPlot <- function(resList, col, xMax, markHalfPeak=FALSE, famLegend=TR
       rbind(v, matrix(NA, len - nrow(v), ncol(v)))
     }
   }
-  timeList <- lapply(resList, function(res) res[['sensitivity']][['time']])
+  timeList <- lapply(resList, function(res) if (inherits(res, 'TEfit2'))  res[['sensitivity2']][['time']] else res[['sensitivity']][['time']])
   maxl <- max(sapply(timeList, length))
   timeMat <- sapply(timeList, padNA, len=maxl)
   birthRangeAll <- sapply(resList, function(res) {
-    # if (!asDensity)
-      # apply(res[['birthRange']], 2, function(x) x / max(x))
-    # else
-    padNA(res[['sensitivity']][['insRange']], maxl)
+    if (inherits(res, 'TEfit2')) {
+      padNA(res[['sensitivity2']][['insRange']], maxl)
+    } else {
+      padNA(res[['sensitivity']][['insRange']], maxl)
+    }
   }, simplify='array') # Reorder to a 3D array
 
   if (any(is.nan(birthRangeAll))) {
@@ -279,27 +282,35 @@ SensitivityPlot <- function(resList, col, xMax, markHalfPeak=FALSE, famLegend=TR
   matplot(timeMat, birthRangeAll[, 3, ], xlab='Mya', lty=3, col=col, add=TRUE, type='l', lwd=baselwd + 2, ...)
   legend('topright', c('low', 'median', 'high'), lty=c(2, 1, 3), title='Death rate', lwd=c(baselwd, baselwd, baselwd + 2))
 
-  if (markHalfPeak) {
-    for (k in 1:dim(birthRangeAll)[3]) {
-      halfInd <- apply(birthRangeAll[, , k], 2, findHalfIntensity)
-      # points(timeMat[halfInd[1, ], k], halfInd[3, ], pch='-', cex=1.5, col=col[k])
-      # points(timeMat[halfInd[2, ], k], halfInd[3, ], pch='-', cex=1.5, col=col[k])
-      for (i in 1:2) {
-      matlines(matrix(c(timeMat[halfInd[i, ], k] - 0.09,
-                        timeMat[halfInd[i, ], k] + 0.09), nrow=2, byrow=TRUE), 
-               rbind(halfInd[3, ],
-                     halfInd[3, ]),
-               pch='-', lwd=c(baselwd, baselwd, baselwd + 2), col=col[k], lty=c(2, 1, 3))
+  # indices are (subject, scenario, before/after, x/y)
+  peakLoc <- array(NA, c(dim(birthRangeAll)[3], 3, 2, 2))
+  dimnames(peakLoc) <- list(names(resList), NULL, c('before', 'after'), c('x', 'y'))
+
+  for (k in 1:dim(birthRangeAll)[3]) {
+    halfInd <- apply(birthRangeAll[, , k], 2, findHalfIntensity)
+
+    for (i in 1:2) {
+      xx <- timeMat[halfInd[i, ], k]
+      yy <- halfInd[3, ]
+      peakLoc[k, , i, ] <- cbind(xx, yy)
+      if (markHalfPeak) {
+        matlines(matrix(c(xx - 0.09,
+                          xx + 0.09), nrow=2, 
+                        byrow=TRUE), 
+                 rbind(yy, yy),
+                 pch='-', lwd=c(baselwd, baselwd, baselwd + 2), col=col[k], 
+                 lty=c(2, 1, 3))
       }
     } 
   }
-  
 
   if (length(resList) != 1 && !is.null(col) && famLegend) {
     legend('right', rLegend, col=col, lty=1, lwd=baselwd)
   }
 
-  invisible(list(timeMat, birthRangeAll))
+  invisible(list(timeMat=timeMat, 
+                 birthRange=birthRangeAll,
+                 peakLoc=peakLoc))
 }
 
 
@@ -332,7 +343,7 @@ findHalfIntensity <- function(y) {
 #' nbLackOfFitKL(res1)
 nbLackOfFitKL <- function(res) {
 
-  pts <- 0:300L # TODO: modify this
+  pts <- seq(0, 0.2 * res$meanLen) # TODO: modify this
 
   if ('TEfit2' %in% class(res)) {
     est2 <- res[['estimates2']]
@@ -351,6 +362,7 @@ nbLackOfFitKL <- function(res) {
   KDEval <- stats::approx(KDE[['x']], KDE[['y']], pts)[['y']]
   KDEval <- KDEval / sum(KDEval, na.rm=TRUE)
   kl <- sum(nbDensity * log(nbDensity / KDEval), na.rm=TRUE)
+  # browser()
 
   kl
 }
@@ -385,10 +397,11 @@ dTwoNB <- function(x, size1, prob1, size2, prob2, p) {
 #' res3 <- EstDynamics2(dat$Mismatch, dat$UngapedLen, plotFit=TRUE, nTrial=1000L)
 #' }
 
-EstDynamics2 <- function(mismatch, len, r=1.3e-2, nTrial=10L, plotFit=FALSE, ...) {
+EstDynamics2 <- function(mismatch, len, r=1.3e-2, nTrial=10L, perturb=2, rateRange=NULL, plotFit=FALSE, plotSensitivity=FALSE, pause=plotFit && plotSensitivity, ...) {
 
   ddd <- list(...)
   main <- ddd[['main']]
+  meanLen <- mean(len)
 
   # plotFit <- ddd[['plotFit']]
   # if (is.null(plotFit)) {
@@ -440,6 +453,8 @@ EstDynamics2 <- function(mismatch, len, r=1.3e-2, nTrial=10L, plotFit=FALSE, ...
   maxMis <- floor(max(mismatch) * 1.5)
   pts <- seq(0, maxMis)
   ptsDense <- seq(0.1, maxMis, by=0.1)
+  timeScale <- pts / meanLen / r / 2
+  timeScaleDense <- ptsDense / meanLen / r / 2
 
   den1 <- res_[['KDE']]
   lineNB <- dnbinom(pts, 
@@ -461,18 +476,50 @@ EstDynamics2 <- function(mismatch, len, r=1.3e-2, nTrial=10L, plotFit=FALSE, ...
     }
     hist(mismatch, xlab='Mismatch', 
          main=main,
-         ylim=c(0, yMax), probability=TRUE, col='cyan')
+         ylim=c(0, yMax), probability=TRUE, col='white')
     lwd <- 2
-    lines(den1, lwd=lwd)
-    lines(pts, lineNB, lty=2, lwd=lwd)
+    ind <- den1$x >= 0
+    lines(den1$x[ind], den1$y[ind], lwd=lwd)
+    lines(pts, lineNB, lty=2, lwd=lwd, col='blue')
     lg <- c('KDE', 'neg. bin.', 'age dist.', '2 neg. bin.', '2 age dist.')
     lty <- c(1, 2, 4, 2, 4)
-    col <- c(rep('black', 3), rep('red', 2))
+    col <- c('black', rep('blue', 2), rep('red', 2))
     legend('topright', legend=lg, col=col, lty=lty, lwd=lwd)
-    lines(ptsDense, lineGammaRec, lty=4, lwd=lwd)
+    lines(ptsDense, lineGammaRec, lty=4, lwd=lwd, col='blue')
   
     lines(pts, lineNB2, lty=2, col='red', lwd=lwd)
     lines(ptsDense, lineGammaRec2, lty=4, col='red', lwd=lwd)
+  }
+
+  ## Sensitivity analysis.
+  p1 <- res_$estimate['geom_p']
+  deathRate <- p1 / (1 - p1)
+  if (is.null(rateRange)) {
+    rateRange <- signif(deathRate * c(rev(1 / perturb), 1, perturb), 3)
+  } else {
+    rateRange <- signif(rateRange, 3)
+  }
+    
+  ## In mutation scale.
+  birthRange2 <- sapply(rateRange, function(rate) {
+    birth <- lineGammaRec2 / (1 - stats::pexp(ptsDense, rate))
+    birth[is.infinite(birth)] <- NaN
+    birth <- birth / sum(birth, na.rm=TRUE) / (timeScaleDense[2] - timeScaleDense[1])
+    birth
+  })
+  colnames(birthRange2) <- rateRange
+  
+  obj1 <- rainbow::fts(timeScaleDense, birthRange2, xname='Mya', yname='Normalized birth rate')
+  ind <- max(which(birthRange2 > 1e-4, arr.ind=TRUE)[, 1])
+  if (ind == -Inf) {
+    ind <- length(timeScaleDense)
+  }
+  xMaxSen <- timeScaleDense[ind]
+  if (plotSensitivity) {
+    rainbow::plot.fds(obj1, plot.type='functions', main=sprintf('Sensitivity analysis'), xlim=c(0, xMaxSen), plotlegend=TRUE)
+    if (pause) {
+      readline('Press enter to continue')
+    }
   }
     
   estimates2 <- c(
@@ -501,7 +548,12 @@ EstDynamics2 <- function(mismatch, len, r=1.3e-2, nTrial=10L, plotFit=FALSE, ...
       ageDist2 = list(x=timeScaleDense, y=ageDist2Rec), 
       insRt2 = list(x=timeScaleDense, y=birthRateRec2), 
       agePeakLoc2 = timeScaleDense[findPeaks(lineGammaRec2)], 
-      insPeakLoc2 = timeScaleDense[findPeaks(birthRateRec2)]
+      insPeakLoc2 = timeScaleDense[findPeaks(birthRateRec2)],
+      sensitivity2 = list(
+        time      = timeScaleDense, 
+        delRateRange = rateRange, 
+        insRange     = birthRange2
+      )
     ), 
     res_)
   class(res) <- c('TEfit2', class(res_))
@@ -642,3 +694,148 @@ PlotFamilies <- function(resList, type=c('insRt', 'ageDist'), ...) {
   # p <- ggplot2::ggplot(plotDat, aes(x=x, y=y, color=GroupID)) + settings + ggplot2::geom_point(aes(x=x, y=y), data=cbind(peakDat, y=0), size=1, shape=17, color='grey40')
   invisible(list(plotDat = plotDat, peakDat = peakDat))
 }
+
+
+
+#' Implements the matrix model in Promislow et al (1999)
+#'
+#' @param mismatch A vector containing the number of mismatches.
+#' @param len A vector containing the length of each element. 
+#' @param nsolo An integer giving the number of solo elements.
+#' @param r Mutation rate (substitutions/(million year * site)) used in the calculation. 
+#' @param plotFit Whether to plot the distribution fits.
+#' @param main The title for the plot.
+#'
+#' @details For the method implemented see References.
+#' 
+#' @return This function returns various parameter estimates described in Promislow et al. (1999), containing the following fields. The unit for time is million years ago (Mya):
+#' \item{B}{The constant insertion rate}
+#' \item{q}{The constant excision rate}
+#' \item{lam}{The population growth rate}
+#' \item{R}{The ratio of the number of elements in class j over class j+1, which is constant by assumption}
+#' \item{age1}{The age of the system under model 1 (lambda > 1)}
+#' \item{age2}{The age of the system under model 2 (an initial burst followed by stasis lambda = 1)}
+#' 
+#' @references
+#' \cite{Promislow, D., Jordan, K. and McDonald, J. "Genomic demography: a life-history analysis of transposable element evolution." Proceedings of the Royal Society of London B: Biological Sciences 266, no. 1428 (1999): 1555-1560.}
+#' @export
+#' 
+#' @examples 
+#' # Analyze Gypsy family 24 (Nusif)
+#' data(AetLTR)
+#' dat <- subset(AetLTR, GroupID == 24 & !is.na(Chr))
+#' res1 <- MatrixModel(dat$Mismatch, dat$UngapedLen, nsolo=450, plotFit=TRUE)
+MatrixModel <- function(mismatch, len, nsolo, r=1.3e-2, plotFit=FALSE, main=sprintf('n = %d', n)) {
+  # dat <- filter(allDat, GroupID == 1)
+               # if (dat$GroupID[1] == 31) browser()
+  meanLen <- mean(len)
+  theta <- nsolo
+  n <- length(mismatch)
+  EN <- mean(mismatch)
+  mu <- r * 2 * mean(len)
+  B <- mu / EN
+  q <- theta / (theta + n) / EN * mu
+  lam <- 1 + B - q
+  gamma_a <- log(n) / log(lam)
+
+  # Model 2, burst + stasis. Estimate R using all the complete elements. Not reliable 
+  R <- EN / (EN + 1)
+  gamma_b <- theta * R / (n * mu * (1 - R))
+
+
+  if (plotFit) {
+    maxPts <- floor(max(mismatch) * 1.5)
+    pts <- seq(0, maxPts)
+    ptsDense <- seq(0.1, maxPts, by=0.1)
+    timeScale <- pts / meanLen / r / 2
+    timeScaleDense <- ptsDense / meanLen / r / 2
+
+    MASS::truehist(mismatch / len / r / 2, 
+                   xlab='Age (Mya)', 
+                   main=main, 
+                   # ylim=c(0, yMax), 
+                   prob=TRUE, 
+                   col='white', 
+                   nbins=min(20, length(unique(as.integer(mismatch))) + 1))
+    lines(timeScaleDense, stats::dexp(timeScaleDense, B), lwd=2)
+  }
+
+  c(B=B, q=q, lam=lam, R=R, age1=gamma_a, age2=gamma_b)
+}
+
+
+#' Implements the master gene model in Marchani et al (2009)
+#'
+#' @param mismatch A vector containing the number of mismatches.
+#' @param len A vector containing the length of each element. 
+#' @param r Mutation rate (substitutions/(million year * site)) used in the calculation. 
+#' @param plotFit Whether to plot the distribution fits.
+#' @param main The title for the plot.
+#'
+#' @details For the method implemented see References.
+#' 
+#' @return This function returns various parameter estimates described in Marchani et al (2009), containing the following fields. The unit for time is million years ago (mya):
+#' \item{B}{The constant insertion rate}
+#' \item{q}{The constant excision rate}
+#' \item{lam}{The population growth rate}
+#' \item{R}{The ratio of the number of elements in class j over class j+1, which is constant by assumption}
+#' \item{age1}{The age of the system under model 1 (lambda > 1)}
+#' \item{age2}{The age of the system under model 2 (an initial burst followed by stasis lambda = 1)}
+#' 
+#' @references
+#' \cite{Marchani, Elizabeth E., Jinchuan Xing, David J. Witherspoon, Lynn B. Jorde, and Alan R. Rogers. "Estimating the age of retrotransposon subfamilies using maximum likelihood." Genomics 94, no. 1 (2009): 78-82.}
+#' @export
+#' 
+#' @examples 
+#' # Analyze Gypsy family 24 (Nusif)
+#' data(AetLTR)
+#' dat <- subset(AetLTR, GroupID == 24 & !is.na(Chr))
+#' res2 <- MasterGene(dat$Mismatch, dat$UngapedLen, plotFit=TRUE)
+MasterGene <- function(mismatch, len, r=1.3e-2, plotFit=FALSE, main=sprintf('n = %d', n)) {
+
+  # ad hoc method: mean age * 2
+  meanLen <- mean(len)
+  n <- length(mismatch)
+  x <- mismatch
+  EN <- mean(x)
+  mu <- 2 * r * meanLen
+  adhoc <- EN / mu * 2
+
+  # MLE which follows formula (3)
+  ff <- function(x, T) {
+    exp(-meanLen * T) * (meanLen * T)^x
+  }
+
+  dLdT <- function(T) {
+    - n / T + sum(vapply(seq_len(n), function(i) {
+        ff(x[i], T) / stats::integrate(ff, 0, T, x=x[i])$value
+      }, 0))
+  }
+
+  root <- stats::uniroot(dLdT, c(1e-4, 4 * adhoc * r), tol=.Machine$double.eps^0.5)
+  famAge <- root$root / (2 * r)
+
+  if (plotFit) {
+    maxPts <- floor(max(mismatch) * 1.5)
+    pts <- seq(0, maxPts)
+    ptsDense <- seq(0.1, maxPts, by=0.1)
+    timeScale <- pts / meanLen / r / 2
+    timeScaleDense <- ptsDense / meanLen / r / 2
+
+    MASS::truehist(mismatch / len / r / 2, 
+                   xlab='Age (Mya)', 
+                   main=main, 
+                   # ylim=c(0, yMax), 
+                   prob=TRUE, 
+                   col='white', 
+                   nbins=min(20, length(unique(as.integer(mismatch))) + 1))
+    dens <- stats::dunif(timeScaleDense, 0, famAge)
+    is.na(dens) <- 0
+    lines(timeScaleDense, dens, lwd=2)
+  }
+
+  c(adhoc=adhoc, MLE=famAge)
+}
+
+
+

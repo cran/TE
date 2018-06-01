@@ -29,7 +29,7 @@
 #' @name TE
 #' @importFrom rainbow fts plot.fds 
 #' @importFrom graphics hist legend lines matlines matplot points
-#' @importFrom stats dgamma dnbinom
+#' @importFrom stats dgamma dnbinom dexp dunif integrate uniroot
 #' @importFrom MASS fitdistr
 NULL
 
