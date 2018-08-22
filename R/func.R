@@ -29,7 +29,7 @@
 #' \item{logLik}{The log-likelihoods of the parametric fits.}
 #' 
 #' @references
-#' \cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2017+). "Birth and Death of LTR Retrotransposons in Aegilops tauschii"}
+#' \cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2018). "Birth and Death of LTR Retrotransposons in Aegilops tauschii". Genetics}
 #' @export
 #' 
 #' @examples 

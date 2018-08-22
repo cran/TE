@@ -4,8 +4,8 @@
 \alias{SensitivityPlot}
 \title{Generate sensitivity plots}
 \usage{
-SensitivityPlot(resList, col, xMax, markHalfPeak = FALSE, famLegend = TRUE,
-  rLegend = names(resList), ...)
+SensitivityPlot(resList, col, xMax, markHalfPeak = FALSE,
+  famLegend = TRUE, rLegend = names(resList), ...)
 }
 \arguments{
 \item{resList}{A list of families returned by \code{\link{EstDynamics}}}

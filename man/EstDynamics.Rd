@@ -84,5 +84,5 @@ res3 <- EstDynamics2(dat$Mismatch, dat$UngapedLen, plotFit=TRUE, nTrial=1000L)
 }
 }
 \references{
-\cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2017+). "Birth and Death of LTR Retrotransposons in Aegilops tauschii"}
+\cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2018). "Birth and Death of LTR Retrotransposons in Aegilops tauschii". Genetics}
 }

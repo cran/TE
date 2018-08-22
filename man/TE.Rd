@@ -21,14 +21,14 @@ This package implements the methods proposed in Dai et al (2018+).
 \references{
 \cite{Luo, Ming-Cheng, et al. (2017) "Genome sequence of the progenitor of the wheat D genome Aegilops tauschii." Nature 551.7681.}
 
-\cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2018+, submitted). "Birth and Death of LTR Retrotransposons in Aegilops tauschii"}
+\cite{Dai, X., Wang, H., Dvorak, J., Bennetzen, J., Mueller, H.-G. (2018). "Birth and Death of LTR Retrotransposons in Aegilops tauschii". Genetics}
 }
 \author{
-Xiongtao Dai \email{dai@ucdavis.edu},
+Xiongtao Dai \email{xdai@iastate.edu},
 Hao Wang
 Jan Dvorak
 Jeffrey Bennetzen
 Hans-Georg Mueller
 
-Maintainer: Xiongtao Dai \email{dai@ucdavis.edu}
+Maintainer: Xiongtao Dai \email{xdai@iastate.edu}
 }
